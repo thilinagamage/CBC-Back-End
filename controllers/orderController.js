@@ -1,6 +1,8 @@
 import Order from "../models/order.js";
+import Product from "../models/product.js";
 
-export function createOrder(req, res){
+export async function createOrder(req, res){
+    
     if(req.user == null){
         res.status(401).json({
             message : "Unathorized"
@@ -9,6 +11,8 @@ export function createOrder(req, res){
     }
 
     const body = req.body;
+    
+console.log("Bill Items Received:", body.billItems);
 
     const orderData = {
         orderId : "",
@@ -23,7 +27,7 @@ export function createOrder(req, res){
    sort({
         date : -1
 
-    }).limit(1).then((lastBills) => {
+    }).limit(1).then(async (lastBills) => {
         if(lastBills.length == 0){
             orderData.orderId = "ORD0001";
         }else{
@@ -39,10 +43,30 @@ export function createOrder(req, res){
         }
 
         for(let i = 0; i < body.billItems.length; i++){
-            const billItems = body.billItems[i];
+    const product = await Product.findOne({ productId: body.billItems[i].productId });
 
-            // check if product exisit
-        }
+    if(product == null){
+        res.status(404).json({
+            message : "Product with product id " + body.billItems[i].productId + " not found"
+        });
+        return;
+    }
+
+    console.log("Product found:", product);
+
+    const billItem = {
+        productId : product.productId,
+        productName : product.name,
+        price : product.price,
+        quantity : body.billItems[i].quantity,
+        image: Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : null,
+    };
+
+    console.log("Bill Item being added:", billItem);
+
+    orderData.billItems[i] = billItem;
+    orderData.total += product.price * body.billItems[i].quantity;
+}
         
         const order = new Order(orderData);
 
@@ -50,8 +74,10 @@ export function createOrder(req, res){
 
         order.save().then(
             () => {
-                res.json({
+                res.json({ 
                     message : "Order saved successfully",
+                    
+                    
                 });
             }
         ).catch(
@@ -102,5 +128,28 @@ export function getOrders(req, res){
                 })
             }
         )
+    }
+}
+
+export async function updateOrder(req, res){
+    try{
+        if(req.user == null){
+            res.status(401).json({
+                message : "Unathorized"
+            })
+            return;
+        }
+        const orderId = req.params.orderId;
+        const order = await Order.findOneAndUpdate({
+            orderId : orderId          
+        },req.body)
+        
+        res.json({
+            message : "Order updated successfully"
+        })
+        }catch(err){
+        res.status(500).json({
+            message : "Order not updated"
+        })
     }
 }

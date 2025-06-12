@@ -33,6 +33,11 @@ const productSchema = new mongoose.Schema({
         required : true,
         default : ["https://www.kazima.in/wp-content/uploads/2024/03/cosmetics.jpg"] 
     },
+    galleryimages : {
+        type : [String],
+        required : true,
+        default : ["https://www.kazima.in/wp-content/uploads/2024/03/cosmetics.jpg"] 
+    },
     stock : {
         type : Number,
         required : true,
